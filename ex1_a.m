@@ -1,10 +1,12 @@
+clear
+
 %Definições de parâmetros iniciais
 m = 500;
 k_y = 20000;
 c_y = 700;
 
 T = 5; %Tempo de simulação
-h_vals = [0.01, 0.001, 0.0001];
+h_vals = [0.1, 0.01, 0.001, 0.0001];
 
 
 % A EDO será resolvida sendo passada para o espaço de estados.
@@ -47,8 +49,7 @@ for h = h_vals
 
     subplot(3,1,3)
     plot(t, x2_dot, 'DisplayName', ['h = ' num2str(h)],'LineWidth',2)
-    hold on; title("Aceleração"); ylabel('d²y/dt² (m/s²)'); xlabel('t (s)'); legend
-
+    hold on; title("Aceleracao"); ylabel('d2y/dt2 (m/s2)'); xlabel('t (s)'); legend
     sgtitle('Método de Euler')
 
 end
