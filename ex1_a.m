@@ -38,16 +38,18 @@ for h = h_vals
     
     % Plot
     subplot(3,1,1)
-    plot(t, x1, 'DisplayName', ['h = ' num2str(h)])
+    plot(t, x1, 'DisplayName', ['h = ' num2str(h)],'LineWidth',2)
     hold on; title("Deslocamento"); ylabel('y (m)'); legend
 
     subplot(3,1,2)
-    plot(t, x2, 'DisplayName', ['h = ' num2str(h)])
+    plot(t, x2, 'DisplayName', ['h = ' num2str(h)],'LineWidth',2)
     hold on; title("Velocidade"); ylabel('dy/dt (m/s)'); legend
 
     subplot(3,1,3)
-    plot(t, x2_dot, 'DisplayName', ['h = ' num2str(h)])
+    plot(t, x2_dot, 'DisplayName', ['h = ' num2str(h)],'LineWidth',2)
     hold on; title("Aceleração"); ylabel('d²y/dt² (m/s²)'); xlabel('t (s)'); legend
+
+    sgtitle('Método de Euler')
 
 end
 
