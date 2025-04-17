@@ -49,7 +49,7 @@ for V = 1:length(velocidades)
         maximos(V,epsilon)= max(Y(1,:));
         
     end
-    plot(epsilon_vals,maximos(V,:),'DisplayName', ['Velocidade = ' num2str(V) 'm/s'],'LineWidth', 2)
+    plot(epsilon_vals,maximos(V,:),'DisplayName', ['Velocidade = ' num2str(V+1) 'm/s'],'LineWidth', 2)
     hold on;
 end
 
