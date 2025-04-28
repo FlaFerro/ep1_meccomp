@@ -23,7 +23,7 @@ x4(1)=0;
 
 epsilon_vals = 0.01:0.045:0.19;
 
-figure('Position', [100, 100, 700, 600])
+figure('Position', [100, 100, 1000, 800])
 
 for epsilon = epsilon_vals
    
