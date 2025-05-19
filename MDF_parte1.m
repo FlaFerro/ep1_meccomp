@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 0.1;
+dx = 0.4;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -47,23 +47,22 @@ xlabel('x'); ylabel('y');
 title('Pontos da malha (excluindo o interior do galpão)');
 
 % Resolucao da eq de Laplace
-phi = randi([4, 6], length(y), length(x));
+phi = zeros(size(X));
 erro = 1;
-cont = 0;
-%while max(abs(erro(:))) > toleracia
-while cont < 1
+while max(abs(erro(:))) > toleracia
     phi = cond_contorno(x,y,H,V,dx,dy,phi);
     phi_aux = phi;
     for i= 2:length(x)/2+1
         for j = 2:(length(y)-1)
-            phi_aux(i,j) = passo(phi,lambda,i,j);
-            phi_aux(i,length(x)-j+1) = phi_aux(i,j);
+            if ~isSolido(j,i)
+                phi_aux(j,i) = passo(phi,lambda,i,j);
+                phi_aux(j,length(x)-i+1) = phi_aux(j,i); %Simetria
+            end
         end
     end
     erro = phi-phi_aux;
     disp(max(abs(erro(:))));
     phi = phi_aux;
-    cont = cont + 1;
 end
 
 %Condicoes de contorno
@@ -76,9 +75,9 @@ function phi = cond_contorno(x,y,H,V,dx,dy,phi)
         else
             phi(j,1) = phi(j,2);
         end
-%Aproveitando a simetria
-        phi(j,length(x)) = phi(j,1);
+        phi(j,length(x)) = phi(j,1); %Aproveitando a simetria
     end
+
 %Margem superior e inferior
     for i = 1:length(x)/2 + 1
         %Superior
@@ -87,13 +86,12 @@ function phi = cond_contorno(x,y,H,V,dx,dy,phi)
         phi(1,i) = 0;
 %Aproveitando a simetria
         %Superior
-        phi(length(y),length(x)-i+1) =  phi(length(y)-1,i) + dy*V;
+        phi(length(y),length(x)-i+1) =  phi(length(y),i);
         %Inferior
         phi(1,length(x)-i+1) = 0 ;
     end
-%Margem inferior
 end
 
 function val_phi_novo = passo(phi, lambda,x,y)
-    val_phi_novo = (1-lambda)*phi(x,y) + (lambda/4)*(phi(x-1,y)+phi(x+1,y)+phi(x,y-1)+phi(x,y+1));
+    val_phi_novo = (1-lambda)*phi(y,x) + (lambda/4)*(phi(y-1,x)+phi(y+1,x)+phi(y,x-1)+phi(y,x+1));
 end
