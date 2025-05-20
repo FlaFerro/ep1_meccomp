@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 0.4;
+dx = 2;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -54,10 +54,8 @@ while max(abs(erro(:))) > toleracia
     phi_aux = phi;
     for i= 2:length(x)/2+1
         for j = 2:(length(y)-1)
-            if ~isSolido(j,i)
-                phi_aux(j,i) = passo(phi,lambda,i,j);
-                phi_aux(j,length(x)-i+1) = phi_aux(j,i); %Simetria
-            end
+            phi_aux(j,i) = passo(phi,lambda,i,j,isSolido);
+            phi_aux(j,length(x)-i+1) = phi_aux(j,i); %Simetria
         end
     end
     erro = phi-phi_aux;
@@ -79,19 +77,27 @@ function phi = cond_contorno(x,y,H,V,dx,dy,phi)
     end
 
 %Margem superior e inferior
-    for i = 1:length(x)/2 + 1
+    for i = 1:length(x)
         %Superior
         phi(length(y),i) = phi(length(y)-1,i) + dy*V;
         %Inferior
         phi(1,i) = 0;
-%Aproveitando a simetria
-        %Superior
-        phi(length(y),length(x)-i+1) =  phi(length(y),i);
-        %Inferior
-        phi(1,length(x)-i+1) = 0 ;
+% %Aproveitando a simetria
+            %Superior
+       phi(length(y),length(x)-i+1) =  phi(length(y),i);
+       %Inferior
+       phi(1,length(x)-i+1) = 0 ;
     end
 end
 
-function val_phi_novo = passo(phi, lambda,x,y)
+function val_phi_novo = passo(phi, lambda,x,y,isSolido)
+    if isSolido(x-1,y) || isSolido(x+1,y) || isSolido(x,y-1) || isSolido(x,y+1) %Verifica se está junto ao prédio.
+        %Verificar se o prédio está pra direita ou para baixo ou os dois.
+        %Calcular as proporções
+        %Resolver os sistemas
+        %Devolve o valor phi(x,y)
+    else
+    %Executa sobrerrelaxação tradicional se não está perto do prédio.
     val_phi_novo = (1-lambda)*phi(y,x) + (lambda/4)*(phi(y-1,x)+phi(y+1,x)+phi(y,x-1)+phi(y,x+1));
+    end
 end
