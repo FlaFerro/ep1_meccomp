@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = h/8;
+dx = 0.33;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -41,14 +41,33 @@ for i = 1:length(x)
     end
 end
 
+[~, j_first] = find(isSolido(1, :), 1, 'first');
+x_telha = (X(1,j_first)):dx:(d + L - dx);
+y_telha = sqrt((L/2).^2 - (x_telha - (d + L/2)).^2) + h;
+y_telha_aux = Y(length(0:dy:h)+1,1):dy:(h+L/2);
+x_telha_esq = d + L/2 - sqrt((L/2)^2 - (y_telha_aux - h).^2); % Ramo esquerdo (sinal -)
+x_telha_dir  = d + L/2 + sqrt((L/2)^2 - (y_telha_aux - h).^2); % Ramo direito (sinal +)
+y_parede_esq = 0:dy:h;
+x_parede_esq = d*ones(size(y_parede_esq));
+y_parede_dir = 0:dy:h;
+x_parede_dir = (d+L)*ones(size(y_parede_dir));
+
+x_galpao = [x_parede_esq, x_telha_esq, x_telha, x_telha_dir, x_parede_dir];
+y_galpao = [y_parede_esq, y_telha_aux, y_telha, y_telha_aux, y_parede_dir];
 
 
 % Plota apenas os pontos da malha (isSolido == false)
 mask = ~isSolido;  % true para pontos de malha válidos
-scatter( X(mask), Y(mask), 2, 'k', 'filled' ) 
+scatter( X(mask), Y(mask), 20, 'k', 'filled' )
+hold on
+scatter(x_galpao, y_galpao, 10, 'r', 'filled')
 axis equal
 xlabel('x'); ylabel('y');
 title('Pontos da malha (excluindo o interior do galpão)');
+% Configurar o grid com espaçamento dx e dy
+xticks(min(x):dx:max(x));  % Linhas verticais a cada dx
+yticks(min(y):dy:max(y));  % Linhas horizontais a cada dy
+grid on;
 
 % Criação de matriz de testes
 
