@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 2;
+dx = 1;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -17,9 +17,9 @@ y = 0:dy:H;
 
 % Outros parâmetros do problema
 
-V = 100*3.6; %Velocidade em m/s!
+V = 100/3.6; %Velocidade em m/s!
 lambda = 1.85;
-toleracia = 0.01;
+toleracia = 0.1;
 
 % Verificacao dos pontos dentro do galpao
 
@@ -90,20 +90,10 @@ end
 %Condicoes de contorno
 
 function phi = cond_contorno(x,y,H,V,dx,dy,phi)
-%Margem esquerda
-    for j = 1:length(y)
-        if j*dy <= 0.05*H
-             phi(j,1) = V*(dx^2)/(0.1*H) + phi(j,2);
-        else
-            phi(j,1) = phi(j,2);
-        end
-        phi(j,length(x)) = phi(j,1); %Aproveitando a simetria
-    end
-
 %Margem superior e inferior
     for i = 1:length(x)
         %Superior
-        phi(length(y),i) = phi(length(y)-1,i) + dy*V;
+        phi(length(y),i) = phi(length(y)-1,i) + dy*V;    
         %Inferior
         phi(1,i) = 0;
 % %Aproveitando a simetria
@@ -111,6 +101,20 @@ function phi = cond_contorno(x,y,H,V,dx,dy,phi)
        phi(length(y),length(x)-i+1) =  phi(length(y),i);
        %Inferior
        phi(1,length(x)-i+1) = 0 ;
+    end
+
+    %Margem esquerda
+    for j = 2:length(y)
+        if j*dy <= 0.05*H
+            %phi(j,1) = V*(dx^2)/(0.1*H) + phi(j,2);
+            %phi(j,1) = V^((j-1)*dy/(0.05*H*dy)) + phi(j-1,1)/dy^2 + phi(j,2)/dx;
+            phi(j,1) = phi(j-1,1) + V*(j-1)*dy/(0.05*H);
+            %phi(j,1) = phi(j-1,1) + V^((j-1)*dy/(0.05*H));
+
+        else
+            phi(j,1) = phi(j-1,1)+V;
+        end
+        phi(j,length(x)) = phi(j,1); %Aproveitando a simetria
     end
 end
 
