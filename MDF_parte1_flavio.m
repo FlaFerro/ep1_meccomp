@@ -145,8 +145,13 @@ scatter(X(isSolido), Y(isSolido), 10, 'k', 'filled'); % Destacar o sólido
 % Calcular velocidades (apenas para pontos fora do sólido)
 u = zeros(size(psi));
 v = zeros(size(psi));
-u(~isSolido) = gradient(psi(~isSolido), dy);  % u = ∂ψ/∂y
-v(~isSolido) = -gradient(psi(~isSolido), dx); % v = -∂ψ/∂x
+for linha = 2:length(y)-1
+    for coluna = 2:length(x)-1
+        v(linha,coluna) = -(psi(linha,coluna+1) - psi(linha,coluna-1)) / (2*dx);
+        u(linha,coluna) = (psi(linha+1,coluna) - psi(linha-1,coluna)) / (2*dy);
+    end
+end
+
 
 % Plotar campo de velocidade (setas pretas) - ItemB
 figure;
