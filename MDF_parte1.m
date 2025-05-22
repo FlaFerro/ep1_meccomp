@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 2;
+dx = 1;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -17,9 +17,9 @@ y = 0:dy:H;
 
 % Outros parâmetros do problema
 
-V = 100*3.6; %Velocidade em m/s!
+V = 100/3.6; %Velocidade em m/s!
 lambda = 1.85;
-toleracia = 0.01;
+toleracia = 0.1;
 
 % Verificacao dos pontos dentro do galpao
 
@@ -68,57 +68,106 @@ yticks(min(y):dy:max(y));  % Linhas horizontais a cada dy
 grid on;
 
 % Resolucao da eq de Laplace
-phi = zeros(size(X));
+psi = zeros(size(X));
+psi_aux = psi;
 erro = 1;
-cont = 0;
-while cont < 100 %max(abs(erro(:))) > toleracia
-    phi = cond_contorno(x,y,H,V,dx,dy,phi);
-    phi_aux = phi;
+psi = cond_contorno(x,y,H,V,dx,dy,psi);
+while max(abs(erro(:))) > toleracia
     for coluna= 2:length(x)/2+1 
         for linha = 2:(length(y)-1) 
-            phi_aux(linha,coluna) = passo(phi,lambda,linha,coluna,isSolido,d,dx,L,h,dy);
-            phi_aux(linha,length(x)-coluna+1) = phi_aux(linha,coluna); %Simetria
+            psi(linha,coluna) = passo(psi,lambda,linha,coluna,isSolido,d,dx,L,h,dy);
+            psi(linha,length(x)-coluna+1) = psi(linha,coluna); %Simetria
         end
     end
-    erro = phi-phi_aux;
+    erro = psi-psi_aux;
     disp(max(abs(erro(:))));
-    phi = phi_aux;
-    cont = cont+1;
-    mesh(phi);
+    psi_aux = psi;
 end
+
+
+figure;
+contourf(X, Y, psi, 20, 'LineColor', 'none');
+colorbar;
+axis equal;
+xlabel('x'); ylabel('y');
+title('Função de Corrente Genérica (\psi)');
+hold on;
+scatter(X(isSolido), Y(isSolido), 2, 'r', 'filled'); % Destacar o sólido
+
+% Calcular velocidades (apenas para pontos fora do sólido)
+u = zeros(size(psi));
+v = zeros(size(psi));
+u(~isSolido) = gradient(psi(~isSolido), dy);  % u = ∂ψ/∂y
+v(~isSolido) = -gradient(psi(~isSolido), dx); % v = -∂ψ/∂x
+
+% Plotar campo de velocidade (setas pretas) - ItemB
+figure;
+quiver(X(mask), Y(mask), u(mask), v(mask), ...
+    'AutoScaleFactor', 1.5, ...
+    'Color', 'k', ...          % Define cor preta
+    'LineWidth', 1.2);         % Espessura das setas
+axis equal;
+grid on;                       % Adiciona grade
+xlabel('x (m)'); 
+ylabel('y (m)');
+title('Campo de Velocidade (Genérico)');
+
+% Ajustar limites dos eixos (se necessário)
+xlim([min(x), max(x)]);
+ylim([min(y), max(y)]);
+
+%Pressão item C
+
+% Calcular a pressão (equação corrigida)
+gamma_term = (gamma_ar - 1) / gamma_ar;
+DeltaP = rho * gamma_term * ( (V^2)/2 - (u.^2 + v.^2)/2 );
+
+% Mascarar pontos dentro do sólido (isSolido)
+DeltaP(isSolido) = NaN; % Ignorar pressão no interior
+
+% Plotar pressão
+figure;
+contourf(X, Y, DeltaP, 50, 'LineColor', 'none');
+colorbar;
+colormap('jet');
+hold on;
+scatter(X(isSolido), Y(isSolido), 2, 'k', 'filled'); % Destacar o sólido
+axis equal;
+xlabel('x (m)');
+ylabel('y (m)');
+title('Distribuição de Pressão Relativa (p - p_{atm}) [Pa]');
+
 
 %Condicoes de contorno
 
-function phi = cond_contorno(x,y,H,V,dx,dy,phi)
-%Margem esquerda
-    for j = 1:length(y)
-        if j*dy <= 0.05*H
-             phi(j,1) = V*(dx^2)/(0.1*H) + phi(j,2);
-        else
-            phi(j,1) = phi(j,2);
-        end
-        phi(j,length(x)) = phi(j,1); %Aproveitando a simetria
-    end
+function psi = cond_contorno(x,y,H,V,dx,dy,psi)
 
-%Margem superior e inferior
-    for i = 1:length(x)
-        %Superior
-        phi(length(y),i) = phi(length(y)-1,i) + dy*V;
-        %Inferior
-        phi(1,i) = 0;
 % %Aproveitando a simetria
             %Superior
-       phi(length(y),length(x)-i+1) =  phi(length(y),i);
+%        psi(length(y),length(x)-i+1) =  psi(length(y),i);
        %Inferior
-       phi(1,length(x)-i+1) = 0 ;
-    end
-end
+    %   psi(1,length(x)-i+1) = 0 ;
+    %end
 
-function val_phi_novo = passo(phi, lambda,linha,coluna,isSolido,d,dx,L,h,dy)
+    %Margem esquerda
+    for j = 2:length(y)
+        psi(j,1) = V*(j-1)*dx - 0.0025*V*H;
+        psi(j,length(x)) = psi(j,1); %Aproveitando a simetria
+    end
+      for i = 2:length(x)
+        psi(length(y),i) = psi(length(y),1);
+      end
+
+        %Inferior
+        psi(1,i) = 0;
+
+ end
+
+function val_psi_novo = passo(psi, lambda,linha,coluna,isSolido,d,dx,L,h,dy)
     
     %Define o valor no prédio.
     if isSolido(linha,coluna) 
-        val_phi_novo = 0;  
+        val_psi_novo = 0;  
 
     %Utiliza cond. de contorno irregulares se perto do prédio.
     elseif isSolido(linha,coluna+1) || isSolido(linha-1,coluna) 
@@ -127,7 +176,7 @@ function val_phi_novo = passo(phi, lambda,linha,coluna,isSolido,d,dx,L,h,dy)
         if (coluna-1)*dx < d %Só na parede lateral.
             a = (d-(coluna-1)*dx)/dx ;
         else %Nos contornos do teto circular
-            a = ((d+L/2-(coluna-1)*dx) - sqrt( (L/2)^2 - ((linha-1)*dy - h)^2 ))/dy;
+            a = ((d + L/2 -(coluna-1)*dx) - sqrt( (L/2)^2 - ((linha-1)*dy - h)^2 ))/dx;
             if ~isSolido(linha,coluna+1)
                 a=1;
             end
@@ -137,9 +186,9 @@ function val_phi_novo = passo(phi, lambda,linha,coluna,isSolido,d,dx,L,h,dy)
             end
         end
         %Calcula o valor usando as proporções.
-        val_phi_novo = ((a*b*dx^2*dy^2)/(a*dx^2 + b*dy^2))*((phi(linha,coluna-1)/(dx^2*(a+1)))+(phi(linha+1,coluna)/dy^2*(b+1)));
+        val_psi_novo = ((a*b*dx^2*dy^2)/(a*dx^2 + b*dy^2))*((psi(linha,coluna-1)/(dx^2*(a+1)))+(psi(linha+1,coluna)/dy^2*(b+1)));
     else
     %Executa sobrerrelaxação tradicional se não está perto do prédio.
-    val_phi_novo = (1-lambda)*phi(linha,coluna) + (lambda/4)*(phi(linha-1,coluna)+phi(linha+1,coluna)+phi(linha,coluna-1)+phi(linha,coluna+1));
+    val_psi_novo = (lambda/4)*(psi(linha-1,coluna)+psi(linha+1,coluna)+psi(linha,coluna-1)+psi(linha,coluna+1)) + (1-lambda)*psi(linha,coluna);
     end
 end
