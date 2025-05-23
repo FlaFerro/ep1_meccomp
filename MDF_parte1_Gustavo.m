@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 0.1;
+dx = 0.15;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -19,7 +19,7 @@ y = 0:dy:H;
 
 V = 100/3.6; %Velocidade em m/s!
 lambda = 1.85;
-toleracia = 0.01;
+toleracia = 0.001;
 rho = 1.25;    % Densidade do ar (kg/m³)
 gamma_ar = 1.4;% Razão de calor específico do ar
 
@@ -83,7 +83,7 @@ while max(abs(erro(:))) > toleracia
             if ~isSolido(j,i)
                 if isSolido(j,i-1) || isSolido(j,i+1) || isSolido(j-1,i)
                     if isSolido(j, i+1) && ~isSolido(j-1, i)
-                        %Quadrante 1
+                        
                         if Y(j,i) > h
                             a = abs(((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
                         else
@@ -92,19 +92,19 @@ while max(abs(erro(:))) > toleracia
                         psi(j,i)=(2/(a*dx^2)+2/dy^2)^(-1)*(2*psi(j,i-1)/(dx^2*(a+1))+(psi(j+1,i)+psi(j-1,i))/dy^2);
                    
                     elseif isSolido(j, i+1) && isSolido(j-1, i)
-                        %Quadrante 2
+                        
                         a = abs(((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
                         b = abs((Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy);
                         psi(j,i)=(2/(a*dx^2)+2/(b*dy^2))^(-1)*(2*psi(j,i-1)/(dx^2*(a+1))+2*psi(j+1,i)/(dy^2*(b+1)));
                    
                     elseif isSolido(j, i-1) && isSolido(j-1, i)
-                        %Quadrante 3
+                        
                         a = abs(((d + L/2 + sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
                         b = abs((Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy);
                         psi(j,i)=(2/(a*dx^2)+2/(b*dy^2))^(-1)*(2*psi(j,i+1)/(dx^2*(a+1))+2*psi(j+1,i)/(dy^2*(b+1)));
                        
                     elseif isSolido(j, i-1) && ~isSolido(j-1, i)
-                        %Quadrante 4
+                        
                         if Y(j,i) > h
                             a = abs(((d + L/2 + sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
                         else
@@ -120,25 +120,22 @@ while max(abs(erro(:))) > toleracia
                     end
                 else
                     %Pontos interiores
-%                     psi_termo = (psi(j,i+1)+psi(j,i-1)+psi(j+1,i)+psi(j-1,i))/4;
-%                     psi_aux(j,i) = lambda*psi_termo+(1-lambda)*psi(j,i);
                     psi(j,i) = (lambda/4)*(psi(j-1,i)+psi(j+1,i)+psi(j,i-1)+psi(j,i+1)) + (1-lambda)*psi_aux(j,i);
                 end    
             end
         end
     end
-%     psi(2:end-1,2:end-1)=lambda*psi(2:end-1,2:end-1)+(1-lambda)*psi_aux(2:end-1,2:end-1);
-%     psi = cond_contorno(X,Y,dx,dy,H,V,psi);
     erro = abs((psi - psi_aux) ./ max(abs(psi), 1e-10));
     display(max(erro(:)));
 end
 
 figure;
 contourf(X, Y, psi, 20, 'LineColor', 'none');
-colorbar;
+cb = colorbar;
+ylabel(cb, 'Função de corrente (m^2/s)');
 axis equal;
 xlabel('x'); ylabel('y');
-title('Função de Corrente Genérica (\psi)');
+title('Função de Corrente (\psi)');
 hold on;
 scatter(X(isSolido), Y(isSolido), 10, 'k', 'filled'); % Destacar o sólido
 
@@ -162,38 +159,88 @@ for linha = 2:length(y)-1
 end
 
 % Calcular a pressão ao longo do telhado.
-p_telhado = zeros(2, L/dx+3);
+p_telhado = zeros(2, L/dx+1);
 for coluna = 1:length(p_telhado)
     p_telhado(1,coluna) = min(p(:,coluna + d/dx - 1));
-    p_telhado(2,coluna) = d + coluna*dx;
+    p_telhado(2,coluna) = d + (coluna-1)*dx;
 end
-figure;
-plot(p_telhado(2,:),p_telhado(1,:))
-grid on;
-xlabel('x (m)');
-ylabel('Diferencial de pressão (Pa)');
-title('Diferencial de pressão ao longo do telhado');
 
-% Plotar campo de velocidade (setas pretas) - ItemB
 figure;
-quiver(X(mask), Y(mask), u(mask), v(mask), ...
-    'AutoScaleFactor', 1.5, ...
+yyaxis right
+x_telhado_plot = d:dx:(d+L);
+plot(x_telhado_plot,sqrt((L/2).^2 - (x_telhado_plot - (d + L/2)).^2) + h , 'Color', 'k', 'LineWidth', 1.5); % Telhado em preto
+ylabel('Y do telhado (m)', 'Color', 'k');
+ylim([min(y_telha) max(y_telha)]);
+set(gca, 'YColor', 'k'); % Cor do eixo esquerdo
+
+yyaxis left
+plot(p_telhado(2,:), p_telhado(1,:), 'Color', 'b', 'LineWidth', 1.5); % Pressão em azul escuro
+ylabel('Diferencial de pressão (Pa)', 'Color', 'b');
+ylim([min(p_telhado(1,:)) max(p_telhado(1,:))]);
+set(gca, 'YColor', 'b'); % Cor do eixo direito
+
+xlabel('x (m)');
+title('Diferencial de pressão ao longo do telhado');
+grid on;
+
+x_c = d + L/2;  % Centro do telhado curvo
+y_c = h;
+p_forca=p_telhado(:,2:end-1);
+i = 1;
+F=0;
+for xi = d+dx:dx:(d+L)-dx
+    yi = sqrt((L/2)^2 - (xi - (d + L/2)).^2) + h;
+    n_vec = [xi - x_c, yi - y_c];
+    norm_n = norm(n_vec);
+    n = n_vec / norm_n;
+    
+    x_seg=xi+dx;
+    y_seg = sqrt((L/2)^2 - (x_seg - (d + L/2)).^2) + h;
+    
+    dl = sqrt((xi-x_seg)^2+(yi-y_seg)^2);
+    dF = -p_forca(1,i)*dl*60*n;
+    F = F+dF(2);
+    i=i+1;
+    
+end
+
+fprintf('Força telhado: F = %.2f kN\n', F/1000);
+
+% Plotar campo de velocidade - ItemB
+step = 10;
+% Cria máscara esparsa
+Xq = X(1:step:end, 1:step:end);
+Yq = Y(1:step:end, 1:step:end);
+uq = u(1:step:end, 1:step:end);
+vq = v(1:step:end, 1:step:end);
+maskq=mask(1:step:end, 1:step:end);
+vel_mag = sqrt(u.^2 + v.^2);
+figure;
+contourf(X(2:end-1,2:end-1), Y(2:end-1,2:end-1), vel_mag(2:end-1,2:end-1), 20, 'LineColor', 'none'); % 20 níveis de contorno
+cb = colorbar;
+ylabel(cb, 'Velocidade (m/s)');  % Adiciona legenda ao colorbar
+colormap jet; % Mapa de cores (você pode trocar, por ex: 'parula', 'hot', etc)
+hold on;
+quiver(Xq(maskq), Yq(maskq), uq(maskq), vq(maskq), ...
+    'AutoScaleFactor', 1.2, ...
     'Color', 'k', ...          % Define cor preta
-    'LineWidth', 1.2);         % Espessura das setas
+    'LineWidth', 1);         % Espessura das setas
 axis equal;
 grid on;                       % Adiciona grade
+scatter(X(isSolido), Y(isSolido), 10, 'k', 'filled'); % Destacar o sólido
 xlabel('x (m)');
 ylabel('y (m)');
-title('Campo de Velocidade (Genérico)');
+title('Campo de Velocidade');
 
 
 figure;
 contourf(X, Y, p, 12 , 'LineColor', 'none');
-colorbar;
+cb = colorbar;
+ylabel(cb, 'Pressão (Pa)');
 axis equal;
 xlabel('x'); ylabel('y');
-title('Distribuição diferencial de pressão(Pa)');
-hold on;
+title('Distribuição diferencial de pressão');
+hold on; 
 scatter(X(isSolido), Y(isSolido), 10, 'k', 'filled'); % Destacar o sólido
 
 function psi = cond_contorno(X,Y,dx,dy,H,V,psi)
@@ -213,22 +260,5 @@ function psi = cond_contorno(X,Y,dx,dy,H,V,psi)
     end
    
     psi(end,:) = psi(end,1);
-
-
-
-   
-%     %Margem direita
-%     for j = 2:size(Y,1)
-%         if Y(j,end)<=0.05*H
-%             psi(j,end)=psi(j,end-1)+(V*dx^2)/(0.1*H);
-%         else
-%             psi(j,end)=psi(j,end-1);
-%         end
-%     end
-   
-    %Margem superior
-%     for i = 2:size(X,2)-1
-%         psi(end,i) = psi(end-1,i)+dy*V;
-%     end
 
 end
