@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 1;
+dx = h/8;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -151,19 +151,25 @@ for linha = 2:length(y)-1
         u(linha,coluna) = (psi(linha+1,coluna) - psi(linha-1,coluna)) / (2*dy);
     end
 end
+vel_mag = sqrt(u.^2 + v.^2);
 
-
-% Plotar campo de velocidade (setas pretas) - ItemB
+%Plote de velocidades - item B
 figure;
+contourf(X, Y, vel_mag, 20, 'LineColor', 'none'); % 20 níveis de contorno
+colorbar;
+colormap jet; % Mapa de cores (você pode trocar, por ex: 'parula', 'hot', etc)
+hold on;
+% Plotar o campo de velocidade (setas pretas)
 quiver(X(mask), Y(mask), u(mask), v(mask), ...
     'AutoScaleFactor', 1.5, ...
-    'Color', 'k', ...          % Define cor preta
+    'Color', 'k', ...          % Cor preta
     'LineWidth', 1.2);         % Espessura das setas
+
 axis equal;
-grid on;                       % Adiciona grade
+grid on;
 xlabel('x (m)');
 ylabel('y (m)');
-title('Campo de Velocidade (Genérico)');
+title('Campo de Velocidade');
 
 function psi = cond_contorno(X,Y,dx,dy,H,V,psi)
    

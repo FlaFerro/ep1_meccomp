@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 1;
+dx = h/8;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -17,7 +17,7 @@ y = 0:dy:H;
 
 % Outros parâmetros do problema
 
-V = 20*3.6; %Velocidade em m/s!
+V = 100/3.6; %Velocidade em m/s!
 lambda = 1.15;
 toleracia = 0.01;
 rho = 1.25;    % Densidade do ar (kg/m³)
@@ -72,39 +72,9 @@ xticks(min(x):dx:max(x));  % Linhas verticais a cada dx
 yticks(min(y):dy:max(y));  % Linhas horizontais a cada dy
 grid on;
 
+load('dados_campo.mat');  % Isso carrega psi, u e v no workspace
 
-% Criação de matriz de testes
-
-% Inicializar psi com escoamento uniforme (V*y)
-psi = V * Y; % ψ = V*y (escoamento uniforme na direção x)
-
-% Ajustar condições de contorno:
-% 1. ψ = 0 na base (y = 0)
-psi(Y == 0) = 0;
-
-% 2. Dentro do sólido, ψ = constante (aqui, 0)
-% psi(isSolido) = 0;
-
-% Exibir a matriz psi
-figure;
-contourf(X, Y, psi, 20, 'LineColor', 'none');
-colorbar;
-axis equal;
-xlabel('x'); ylabel('y');
-title('Função de Corrente Genérica (\psi)');
-hold on;
-scatter(X(isSolido), Y(isSolido), 2, 'r', 'filled'); % Destacar o sólido
-
-% Calcular velocidades (apenas para pontos fora do sólido)
-[dpsidx, dpsidy] = gradient(psi, dy, dx);
-u = dpsidy;       % u = ∂ψ/∂y
-v = -dpsidx;      % v = -∂ψ/∂x
-
-% Aplicar máscara
-u(isSolido) = 0;  
-v(isSolido) = 0;
-
-T = 0*ones(size(psi));
+T = 20*ones(size(psi));
 T(isSolido) = T_d;
 T = cond_contorno_temp(X,Y, u, v, T, isSolido, k, dx, dy, rho, c, T_f, T_d, V, d, L);
 
@@ -117,57 +87,81 @@ while max(abs(erro(:))) > toleracia
                 if isSolido(j,i-1) || isSolido(j,i+1) || isSolido(j-1,i)
                     if isSolido(j, i+1) && ~isSolido(j-1, i)
                         %Quadrante 1
-                        a = (d-X(j,i))/dx;
+                        if Y(j,i) > h
+                            a = abs(((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
+                        else
+                            a = abs((d-X(j,i))/dx);
+                        end
                         if u(j,i)>=0 && v(j,i)>=0
                             T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T(j-1,i)/dy));
                         elseif u(j,i)>=0 && v(j,i)<0
                             T(j,i)=(rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(u(j,i)*T(j,i-1)/dx-v(j,i)*T(j+1,i)/dy));
                         elseif u(j,i)<0 && v(j,i)>=0
-                            T(j,i)=(-rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T(j-1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T(j-1,i)/dy));
                         else
-                            T(j,i)=(-rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
                         end
                         
                     elseif isSolido(j, i+1) && isSolido(j-1, i)
                         %Quadrante 2
-                        a = ((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx;
-                        b = (Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy;
+                        a = abs(((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
+                        b = abs((Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy);
                         if u(j,i)>=0 && v(j,i)>=0
-                            T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T_d/(b*dy)));
+                            T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/(b*dy)+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T_d/(b*dy)));
                         elseif u(j,i)>=0 && v(j,i)<0
                             T(j,i)=(rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx-v(j,i)*T(j+1,i)/dy));
                         elseif u(j,i)<0 && v(j,i)>=0
-                            T(j,i)=(-rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T_d/(b*dy)));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)+rho*c*v(j,i)/(b*dy)+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T_d/(b*dy)));
                         else
-                            T(j,i)=(-rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i-1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
                         end
                         
                     elseif isSolido(j, i-1) && isSolido(j-1, i)
                         %Quadrante 3
-                        a = ((d + L/2 - sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx;
-                        b = (Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy;
+                        a = abs(((d + L/2 + sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
+                        b = abs((Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy);
                         if u(j,i)>=0 && v(j,i)>=0
-                            T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T_d/(b*dy)));
+                            T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/(b*dy)+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T_d/(b*dy)));
                         elseif u(j,i)>=0 && v(j,i)<0
                             T(j,i)=(rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx-v(j,i)*T(j+1,i)/dy));
                         elseif u(j,i)<0 && v(j,i)>=0
-                            T(j,i)=(-rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T_d/(b*dy)));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)+rho*c*v(j,i)/(b*dy)+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T_d/(b*dy)));
                         else
-                            T(j,i)=(-rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(b*dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+2/(dy^2)*(T_d/(b*(b+1))+T(j+1,i)/(b+1)))+rho*c*(u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
                         end
                               
-                    else %isSolido(j, i-1) && ~isSolido(j-1, i)
+                    elseif isSolido(j, i-1) && ~isSolido(j-1, i)
                         %Quadrante 4
-                        a = (X(j,i)-(d+L))/dx;
+                        if Y(j,i) > h
+                            a = abs(((d + L/2 + sqrt((L/2)^2 - (Y(j,i) - h)^2))-X(j,i))/dx);
+                        else
+                            a = abs(((d+L)-X(j,i))/dx);
+                        end
+                        
                         if u(j,i)>=0 && v(j,i)>=0
                             T(j,i)=(rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T(j-1,i)/dy));
                         elseif u(j,i)>=0 && v(j,i)<0
                             T(j,i)=(rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(u(j,i)*T(j,i-1)/dx-v(j,i)*T(j+1,i)/dy));
                         elseif u(j,i)<0 && v(j,i)>=0
-                            T(j,i)=(-rho*c*u(j,i)/dx+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T(j-1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)+rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)+v(j,i)*T(j-1,i)/dy));
                         else
-                            T(j,i)=(-rho*c*u(j,i)/dx-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
+                            T(j,i)=(-rho*c*u(j,i)/(a*dx)-rho*c*v(j,i)/dy+2*k/(a*dx^2)+2*k/(dy^2))^(-1)*(k*(2/(dx^2)*(T_d/(a*(a+1))+T(j,i+1)/(a+1))+(T(j+1,i)+T(j-1,i))/dy^2)+rho*c*(-u(j,i)*T_d/(a*dx)-v(j,i)*T(j+1,i)/dy));
                         end
+                        
+                    elseif (~isSolido(j,i-1) && ~isSolido(j,i+1)) && isSolido(j-1,i)
+                        b = abs((Y(j,i)-(sqrt((L/2)^2 - (X(j,i) - (d + L/2))^2) + h))/dy);
+                        
+                        if u(j,i)>=0 && v(j,i)>=0
+                            T(j,i)=(2*k/dx^2+k/(b*dy^2)+rho*c*u(j,i)+rho*c*v(j,i)/(b*dy))^(-1)*(k*((T(j,i+1)+T(j,i-1))/dx^2+(2/dy^2)*(T_d/(b*(b+1))+T(j,i-1)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx+v(j,i)*T_d/(b*dy))); 
+                        elseif u(j,i)>=0 && v(j,i)<0
+                            T(j,i)=(2*k/dx^2+k/(b*dy^2)+rho*c*u(j,i)-rho*c*v(j,i)/(dy))^(-1)*(k*((T(j,i+1)+T(j,i-1))/dx^2+(2/dy^2)*(T_d/(b*(b+1))+T(j,i-1)/(b+1)))+rho*c*(u(j,i)*T(j,i-1)/dx-v(j,i)*T(j+1,i)/dy));
+                        elseif u(j,i)<0 && v(j,i)>=0
+                            T(j,i)=(2*k/dx^2+k/(b*dy^2)-rho*c*u(j,i)+rho*c*v(j,i)/(b*dy))^(-1)*(k*((T(j,i+1)+T(j,i-1))/dx^2+(2/dy^2)*(T_d/(b*(b+1))+T(j,i-1)/(b+1)))+rho*c*(-u(j,i)*T(j,i+1)/dx+v(j,i)*T_d/(b*dy))); 
+                        else
+                            T(j,i)=(2*k/dx^2+k/(dy^2)-rho*c*u(j,i)-rho*c*v(j,i)/(b*dy))^(-1)*(k*((T(j,i+1)+T(j,i-1))/dx^2+(2/dy^2)*(T_d/(b*(b+1))+T(j,i-1)/(b+1)))+rho*c*(-u(j,i)*T(j,i+1)/dx-v(j,i)*T(j+1,i)/dy)); 
+                        end
+                        
+                        
                     end
                 end
                 
@@ -194,7 +188,65 @@ contourf(X, Y, T, 20, 'LineColor', 'none');
 colorbar;
 axis equal;
 xlabel('x'); ylabel('y');
-title('Temperatura Genérica');
+title('Temperatura');
+
+
+dTdx = zeros(size(T));
+dTdy = zeros(size(T));
+for linha = 2:size(T,1)-1
+    for coluna = 2:size(T,2)-1
+        dTdx(linha,coluna) = (T(linha,coluna+1) - T(linha,coluna-1)) / (2*dx);
+        dTdy(linha,coluna) = (T(linha+1,coluna) - T(linha-1,coluna)) / (2*dy);
+    end
+end
+
+% Qdot = 0;  % Inicializa a taxa de calor total
+% x_c = d + L/2;  % Centro do telhado curvo
+% y_c=h;
+% tol = 1e-6;      % Tolerância para evitar divisão por zero
+% 
+% for i = 2:(size(X,2)-1)
+%     for j = 2:(size(Y,1)-1)
+%         if isSolido(j,i-1) || isSolido(j,i+1) || isSolido(j-1,i)
+%             x_i = X(j,i); 
+%             y_j = Y(j,i);
+%             
+%             % Determina dl conforme a região
+%             if (X(j,i) <= d && Y(j,i) <= h) 
+%                 dl = dy;  % Parede vertical
+%                 n = [-1, 0]; % Normal para direita ou esquerda (ajuste conforme necessário)
+%             elseif (X(j,i) >= d+L && Y(j,i) <= h) 
+%                 dl = dy;  % Parede vertical
+%                 n = [1, 0]; 
+%             else
+%                 dl=sqrt(2)*dx;
+%                 n_vec = [x_i - x_c, y_j - y_c];
+%                 n = n_vec / norm(n_vec);
+%             end
+%             
+%             % Produto escalar gradT · n
+%             dotprod = dTdx(j,i)*n(1) + dTdy(j,i)*n(2);
+%             
+%             % Contribuição de calor
+%             Qdot = Qdot - k * dotprod * dl * 60; % 60m de comprimento
+%         end
+%     end
+% end
+% 
+% fprintf('Taxa de calor perdida: Q = %.2f W\n', Qdot);
+
+
+figure;
+quiver(X(mask), Y(mask), dTdx(mask), dTdy(mask), ...
+    'AutoScaleFactor', 1.5, ...
+    'Color', 'k', ...          % Define cor preta
+    'LineWidth', 1.2);         % Espessura das setas
+axis equal;
+grid on;                       % Adiciona grade
+xlabel('x (m)');
+ylabel('y (m)');
+title('Gradiente de temperatura');
+
 
 function T = cond_contorno_temp(X,Y, u, v, T, isSolido, k, dx, dy, rho, c, T_f, T_d, V, d, L)
 
