@@ -180,7 +180,8 @@ while max(abs(erro(:))) > toleracia
     T(2:end-1,2:end-1) = lambda*T(2:end-1,2:end-1)+(1-lambda)*T_aux(2:end-1,2:end-1);
     T = cond_contorno_temp(X,Y, u, v, T, isSolido, k, dx, dy, rho, c, T_f, T_d, V, d, L);
     erro = abs((T-T_aux)./T);
-    erro = max(erro(:))
+    erro = max(erro(:));
+    disp(erro);
 end
 
 figure;
@@ -200,40 +201,45 @@ for linha = 2:size(T,1)-1
     end
 end
 
-% Qdot = 0;  % Inicializa a taxa de calor total
-% x_c = d + L/2;  % Centro do telhado curvo
-% y_c=h;
-% tol = 1e-6;      % Tolerância para evitar divisão por zero
-% 
-% for i = 2:(size(X,2)-1)
-%     for j = 2:(size(Y,1)-1)
-%         if isSolido(j,i-1) || isSolido(j,i+1) || isSolido(j-1,i)
-%             x_i = X(j,i); 
-%             y_j = Y(j,i);
-%             
-%             % Determina dl conforme a região
-%             if (X(j,i) <= d && Y(j,i) <= h) 
-%                 dl = dy;  % Parede vertical
-%                 n = [-1, 0]; % Normal para direita ou esquerda (ajuste conforme necessário)
-%             elseif (X(j,i) >= d+L && Y(j,i) <= h) 
-%                 dl = dy;  % Parede vertical
-%                 n = [1, 0]; 
-%             else
-%                 dl=sqrt(2)*dx;
-%                 n_vec = [x_i - x_c, y_j - y_c];
-%                 n = n_vec / norm(n_vec);
-%             end
-%             
-%             % Produto escalar gradT · n
-%             dotprod = dTdx(j,i)*n(1) + dTdy(j,i)*n(2);
-%             
-%             % Contribuição de calor
-%             Qdot = Qdot - k * dotprod * dl * 60; % 60m de comprimento
-%         end
-%     end
-% end
-% 
-% fprintf('Taxa de calor perdida: Q = %.2f W\n', Qdot);
+Qdot = 0;  % Inicializa a taxa de calor total
+x_c = d + L/2;  % Centro do telhado curvo
+y_c = h;
+tol = 1e-6;      % Tolerância para evitar divisão por zero
+
+for i = 2:(size(X,2)-1)
+    for j = 2:(size(Y,1)-1)
+        if isSolido(j,i-1) || isSolido(j,i+1) || isSolido(j-1,i)
+            x_i = X(j,i); 
+            y_j = Y(j,i);
+            
+            % Determina dl conforme a região
+            if X(j,i) <= d 
+                dl = dy;  
+                n = [-1, 0]; 
+            elseif X(j,i) >= d+L 
+                dl = dy;  
+                n = [1, 0]; 
+            else
+                % Telhado curvo
+                dl = sqrt(dx^2 + dy^2);  
+                n_vec = [x_i - x_c, y_j - y_c];
+                norm_n = norm(n_vec);
+                if norm_n < tol
+                    continue;
+                end
+                n = n_vec / norm_n;
+            end
+            
+            % Produto escalar gradT · n
+            dotprod = dTdx(j,i)*n(1) + dTdy(j,i)*n(2);
+            
+            % Contribuição de calor
+            Qdot = Qdot - k * dotprod * dl * 60; % 60m de comprimento
+        end
+    end
+end
+
+fprintf('Taxa de calor perdida: Q = %.2f W\n', Qdot);
 
 
 figure;
