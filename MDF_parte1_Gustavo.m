@@ -7,7 +7,7 @@ d = 5*h;
 L = 2*h;
 H = 8*h;
 
-dx = 0.15;
+dx = 0.5;
 dy = dx;
 
 x = 0:dx:(2*d+L);
@@ -19,7 +19,7 @@ y = 0:dy:H;
 
 V = 100/3.6; %Velocidade em m/s!
 lambda = 1.85;
-toleracia = 0.001;
+toleracia = 0.01;
 rho = 1.25;    % Densidade do ar (kg/m³)
 gamma_ar = 1.4;% Razão de calor específico do ar
 
@@ -161,8 +161,8 @@ end
 % Calcular a pressão ao longo do telhado.
 p_telhado = zeros(2, L/dx+1);
 for coluna = 1:length(p_telhado)
-    p_telhado(1,coluna) = min(p(:,coluna + d/dx - 1));
-    p_telhado(2,coluna) = d + (coluna-1)*dx;
+    p_telhado(1,coluna) = min(p(:,coluna + d/dx));
+    p_telhado(2,coluna) = d + (coluna-1)*dx ;
 end
 
 figure;
