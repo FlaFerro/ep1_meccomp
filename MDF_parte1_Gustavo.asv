@@ -58,7 +58,7 @@ x_galpao = [x_parede_esq, x_telha_esq, x_telha, x_telha_dir, x_parede_dir];
 y_galpao = [y_parede_esq, y_telha_aux, y_telha, y_telha_aux, y_parede_dir];
 
 % Plotar malha computacional
-figure;
+
 mask = ~isSolido;  % Pontos fluidos
 scatter( X(mask), Y(mask), 20, 'k', 'filled' )
 hold on
@@ -81,7 +81,7 @@ psi_aux = psi;
 
 erro = 1;
 while max(abs(erro(:))) > tolerancia
-%     mesh(X,Y,psi)
+    mesh(X,Y,psi)
     psi_aux = psi;
     
     for i = 2:size(X,2)-1
@@ -169,7 +169,7 @@ end
 
 p_telhado = zeros(2, L/dx+1);
 for coluna = 1:length(p_telhado)
-    p_telhado(1,coluna) = min(p(:,coluna+length(0:dx:d)-1));
+    p_telhado(1,coluna) = min(p(:,coluna + d/dx - 1));
     p_telhado(2,coluna) = d + (coluna-1)*dx;
 end
 
@@ -219,7 +219,7 @@ fprintf('Forca telhado: F = %.2f kN\n', F/1000);
 
 % Plotar campo de velocidade
 
-step = 2;
+step = 10;
 Xq = X(1:step:end, 1:step:end);
 Yq = Y(1:step:end, 1:step:end);
 uq = u(1:step:end, 1:step:end);
@@ -247,7 +247,7 @@ title('Campo de Velocidade');
 % Plotar campo de pressao
 
 figure;
-contourf(X(2:end-1,2:end-1), Y(2:end-1,2:end-1), p(2:end-1,2:end-1), 12 , 'LineColor', 'none');
+contourf(X, Y, p, 12 , 'LineColor', 'none');
 cb = colorbar;
 ylabel(cb, 'Pressao (Pa)');
 axis equal;

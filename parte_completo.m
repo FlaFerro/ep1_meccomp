@@ -155,6 +155,14 @@ for linha = 2:length(y)-1
         u(linha,coluna) = (psi(linha+1,coluna) - psi(linha-1,coluna)) / (2*dy);
     end
 end
+u(length(u(:,1)),:) = V;
+for coluna = 1:length(X)
+    u(1,coluna) = (psi(2,coluna)-psi(1,coluna))/dy;
+end
+u(1:end,1) = V;
+u(1:end,length(u(1,:))) = V;
+
+
 
 % Calcular campo de pressao
 
@@ -228,7 +236,7 @@ maskq = mask(1:step:end, 1:step:end);
 vel_mag = sqrt(u.^2 + v.^2);
 
 figure;
-contourf(X(2:end-1,2:end-1), Y(2:end-1,2:end-1), vel_mag(2:end-1,2:end-1), 20, 'LineColor', 'none');
+contourf(X, Y, vel_mag, 20, 'LineColor', 'none');
 cb = colorbar;
 ylabel(cb, 'Velocidade (m/s)');
 colormap jet;

@@ -221,13 +221,15 @@ for i = 2:(size(X,2)-1)
                 n = [1, 0]; 
             else
                 % Telhado curvo
-                dl = sqrt(dx^2 + dy^2);  
-                n_vec = [x_i - x_c, y_j - y_c];
+                xi=X(j,i);
+                yi = sqrt((L/2)^2 - (xi - (d + L/2)).^2) + h;
+                n_vec = [xi - x_c, yi - y_c];
                 norm_n = norm(n_vec);
-                if norm_n < tol
-                    continue;
-                end
                 n = n_vec / norm_n;
+                x_seg=xi+dx;
+                y_seg = sqrt((L/2)^2 - (x_seg - (d + L/2)).^2) + h;
+                dl = sqrt((xi-x_seg)^2+(yi-y_seg)^2);  
+                
             end
             
             % Produto escalar gradT · n
